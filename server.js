@@ -153,10 +153,10 @@ const db = require("knex")({
 
 const app = express();
 
-// Enable CORS for all origins and handle preflight requests
+// Enable CORS for all origins (adjust if needed)
 app.use(
   cors({
-    origin: "*", // or specify your frontend domain, e.g., "https://babystep.onrender.com"
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -168,8 +168,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 const upload = multer({ dest: "uploads/" });
 
-// REGISTER endpoint
-app.post("/register", (req, res) => {
+// ------------------------
+// Revised /register endpoint
+// ------------------------
+app.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
   console.log("Register request body:", req.body);
 
@@ -179,31 +181,37 @@ app.post("/register", (req, res) => {
 
   const hash = bcrypt.hashSync(password);
 
-  db.transaction((trx) => {
-    trx
-      .insert({
-        hash: hash,
-        email: email,
-      })
-      .into("login")
-      .returning("email")
-      .then(async (loginEmail) => {
-        const user = await trx("users").returning("*").insert({
+  try {
+    // Use async/await for a clearer transaction
+    await db.transaction(async (trx) => {
+      // Insert into the login table
+      const loginEmail = await trx("login")
+        .insert({
+          hash: hash,
+          email: email,
+        })
+        .returning("email");
+
+      // Insert into the users table
+      const user = await trx("users")
+        .insert({
           name: name,
           email: loginEmail[0].email,
           joined: new Date(),
-        });
-        res.json(user[0]);
-      })
-      .then(trx.commit)
-      .catch(trx.rollback);
-  }).catch((err) => {
-    console.error("Register transaction error:", err);
+        })
+        .returning("*");
+
+      res.json(user[0]);
+    });
+  } catch (error) {
+    console.error("Register transaction error:", error);
     res.status(400).json("unable to register");
-  });
+  }
 });
 
-// PROFILE endpoint
+// ------------------------
+// Other endpoints (profile, signin, genai) remain unchanged
+// ------------------------
 app.get("/profile/:id", (req, res) => {
   const { id } = req.params;
   db.select("*")
@@ -222,7 +230,6 @@ app.get("/profile/:id", (req, res) => {
     });
 });
 
-// SIGNIN endpoint
 app.post("/signin", (req, res) => {
   db.select("email", "hash")
     .from("login")
@@ -255,7 +262,6 @@ app.post("/signin", (req, res) => {
     });
 });
 
-// GENAI endpoint
 app.post("/genai", upload.single("file"), async (req, res) => {
   try {
     const filePath = req.file.path;
