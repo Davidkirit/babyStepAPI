@@ -14,11 +14,12 @@ const apiKey = process.env.GEN_AI_KEY;
 //     database: "cooking",
 //   },
 // });
-require("dotenv").config();
-const { Client } = require("pg");
-const client = new Client({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+// require("dotenv").config();
+// const { Client } = require("pg");
+
+const knex = new knex({
+  client: "pg",
+  connection: process.env.DATABASE_URL,
 });
 
 client
