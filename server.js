@@ -284,6 +284,7 @@ app.post("/genai", upload.single("file"), async (req, res) => {
       ],
     });
     res.json({ result: result.response.text() });
+    console.log(result.response.text());
   } catch (err) {
     console.error("GenAI error:", err);
     res.status(400).json("error processing file");
