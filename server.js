@@ -22,10 +22,10 @@ const knex = require("knex")({
   connection: process.env.DATABASE_URL,
 });
 
-client
-  .connect()
-  .then(() => console.log("Connected to PostgreSQL on Render!"))
-  .catch((err) => console.error("Connection error", err));
+// client
+//   .connect()
+//   .then(() => console.log("Connected to PostgreSQL on Render!"))
+//   .catch((err) => console.error("Connection error", err));
 
 const multer = require("multer");
 
