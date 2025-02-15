@@ -179,27 +179,25 @@ app.post("/register", async (req, res) => {
     return res.status(400).json("Missing required fields");
   }
 
-  const hash = bcrypt.hashSync(password);
+  // Convert password to string (in case it's sent as a number) and hash it
+  const hash = bcrypt.hashSync(String(password));
 
   try {
-    // Use async/await for a clearer transaction
     await db.transaction(async (trx) => {
-      // Insert into the login table
-      const loginEmail = await trx("login")
-        .insert({
-          hash: hash,
-          email: email,
-        })
-        .returning("email");
-
-      // Insert into the users table
+      // First insert into users table
       const user = await trx("users")
         .insert({
           name: name,
-          email: loginEmail[0].email,
+          email: email,
           joined: new Date(),
         })
         .returning("*");
+
+      // Then insert into login table (the foreign key constraint is now satisfied)
+      await trx("login").insert({
+        email: email,
+        hash: hash,
+      });
 
       res.json(user[0]);
     });
