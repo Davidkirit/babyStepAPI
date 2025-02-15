@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const bcrypt = require("bcryptjs");
 const cors = require("cors");
 const fs = require("fs");
+const apiKey = process.env.GEN_AI_KEY;
 const knex = require("knex")({
   client: "pg",
   connection: {
@@ -107,9 +108,7 @@ app.post("/genai", upload.single("file"), async (req, res) => {
 
   const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-  const genAI = new GoogleGenerativeAI(
-    "AIzaSyCiuLKBv5bTUKwdNyhorRsKFGT7WmBjPWw"
-  );
+  const genAI = new GoogleGenerativeAI(apiKey);
 
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
