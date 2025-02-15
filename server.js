@@ -4,16 +4,28 @@ const bcrypt = require("bcryptjs");
 const cors = require("cors");
 const fs = require("fs");
 const apiKey = process.env.GEN_AI_KEY;
-const knex = require("knex")({
-  client: "pg",
-  connection: {
-    host: "127.0.0.1",
-    port: 5432,
-    user: "postgres",
-    password: "@Driptoohard",
-    database: "cooking",
-  },
+// const knex = require("knex")({
+//   client: "pg",
+//   connection: {
+//     host: "127.0.0.1",
+//     port: 5432,
+//     user: "postgres",
+//     password: "@Driptoohard",
+//     database: "cooking",
+//   },
+// });
+require("dotenv").config();
+const { Client } = require("pg");
+const client = new Client({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
 });
+
+client
+  .connect()
+  .then(() => console.log("Connected to PostgreSQL on Render!"))
+  .catch((err) => console.error("Connection error", err));
+
 const multer = require("multer");
 
 const app = express();
