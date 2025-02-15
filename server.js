@@ -17,7 +17,7 @@ const apiKey = process.env.GEN_AI_KEY;
 // require("dotenv").config();
 // const { Client } = require("pg");
 
-const knex = new knex({
+const knex = require("knex")({
   client: "pg",
   connection: process.env.DATABASE_URL,
 });
