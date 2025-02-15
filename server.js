@@ -1,45 +1,182 @@
+// const express = require("express");
+// const bodyParser = require("body-parser");
+// const bcrypt = require("bcryptjs");
+// const cors = require("cors");
+// const fs = require("fs");
+// const apiKey = process.env.GEN_AI_KEY;
+// // const knex = require("knex")({
+// //   client: "pg",
+// //   connection: {
+// //     host: "127.0.0.1",
+// //     port: 5432,
+// //     user: "postgres",
+// //     password: "@Driptoohard",
+// //     database: "cooking",
+// //   },
+// // });
+// // require("dotenv").config();
+// // const { Client } = require("pg");
+
+// const db = require("knex")({
+//   client: "pg",
+//   connectionString: process.env.DATABASE_URL,
+//   ssl: { rejectUnauthorized: false },
+// });
+
+// // client
+// //   .connect()
+// //   .then(() => console.log("Connected to PostgreSQL on Render!"))
+// //   .catch((err) => console.error("Connection error", err));
+
+// const multer = require("multer");
+
+// const app = express();
+// app.use(bodyParser.json());
+// app.use(bodyParser.urlencoded({ extended: true }));
+// app.use(cors());
+
+// const upload = multer({ dest: "uploads/" });
+
+// app.post("/register", (req, res) => {
+//   const { name, email, password } = req.body;
+//   console.log(req.body);
+//   const hash = bcrypt.hashSync(password);
+
+//   db.transaction((trx) => {
+//     trx
+//       .insert({
+//         hash: hash,
+//         email: email,
+//       })
+//       .into("login")
+//       .returning("email")
+//       .then(async (loginEmail) => {
+//         const user = await trx("users").returning("*").insert({
+//           name: name,
+//           email: loginEmail[0].email,
+//           joined: new Date(),
+//         });
+//         res.json(user[0]);
+//       })
+//       .then(trx.commit)
+//       .catch(trx.rollback);
+//   }).catch((err) => res.status(400).json("unable to register "));
+// });
+
+// app.get("/profile/:id", (req, res) => {
+//   const { id } = req.params;
+
+//   db.select("*")
+//     .from("users")
+//     .where({ id: id })
+//     .then((user) => {
+//       if (user.length) {
+//         res.json(user[0]);
+//       } else {
+//         res.status(400).json("unable to register ");
+//       }
+//     })
+//     .catch((err) => res.status(400).json("unable to find"));
+// });
+
+// app.post("/signin", (req, res) => {
+//   db.select("email", "hash")
+//     .from("login")
+//     .where("email", "=", req.body.email)
+//     .then((data) => {
+//       const isValid = bcrypt.compareSync(req.body.password, data[0].hash);
+//       if (isValid) {
+//         return db
+//           .select("*")
+//           .from("users")
+//           .where("email", "=", req.body.email)
+//           .then((user) => {
+//             res.json(user[0]);
+//           })
+//           .catch((err) => res.status(400).json("unable to get user"));
+//       } else {
+//         res.status(400).json("wrong credentials");
+//       }
+//     })
+//     .catch((err) => res.status(400).json("unable to get user"));
+// });
+
+// app.post("/genai", upload.single("file"), async (req, res) => {
+//   // const file = req.file;
+
+//   const filePath = req.file.path;
+//   const fileData = fs.readFileSync(filePath);
+//   const fileBase64 = fileData.toString("base64");
+
+//   const filePart = {
+//     inlineData: {
+//       data: fileBase64,
+//       mimeType: req.file.mimetype,
+//     },
+//   };
+
+//   const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+//   const genAI = new GoogleGenerativeAI(apiKey);
+
+//   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+//   const result = await model.generateContent({
+//     contents: [
+//       { role: "user", parts: [filePart] },
+//       { role: "user", parts: [{ text: "summarize this document" }] },
+//     ],
+//   });
+//   res.json({ result: result.response.text() });
+// });
+
+// app.listen(4000, () => {
+//   console.log("im doing it");
+// });
+require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcryptjs");
 const cors = require("cors");
 const fs = require("fs");
+const multer = require("multer");
+
 const apiKey = process.env.GEN_AI_KEY;
-// const knex = require("knex")({
-//   client: "pg",
-//   connection: {
-//     host: "127.0.0.1",
-//     port: 5432,
-//     user: "postgres",
-//     password: "@Driptoohard",
-//     database: "cooking",
-//   },
-// });
-// require("dotenv").config();
-// const { Client } = require("pg");
 
 const db = require("knex")({
   client: "pg",
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  connection: {
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  },
 });
 
-// client
-//   .connect()
-//   .then(() => console.log("Connected to PostgreSQL on Render!"))
-//   .catch((err) => console.error("Connection error", err));
-
-const multer = require("multer");
-
 const app = express();
+
+// Enable CORS for all origins and handle preflight requests
+app.use(
+  cors({
+    origin: "*", // or specify your frontend domain, e.g., "https://babystep.onrender.com"
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+app.options("*", cors());
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cors());
 
 const upload = multer({ dest: "uploads/" });
 
+// REGISTER endpoint
 app.post("/register", (req, res) => {
   const { name, email, password } = req.body;
-  console.log(req.body);
+  console.log("Register request body:", req.body);
+
+  if (!name || !email || !password) {
+    return res.status(400).json("Missing required fields");
+  }
+
   const hash = bcrypt.hashSync(password);
 
   db.transaction((trx) => {
@@ -60,12 +197,15 @@ app.post("/register", (req, res) => {
       })
       .then(trx.commit)
       .catch(trx.rollback);
-  }).catch((err) => res.status(400).json("unable to register "));
+  }).catch((err) => {
+    console.error("Register transaction error:", err);
+    res.status(400).json("unable to register");
+  });
 });
 
+// PROFILE endpoint
 app.get("/profile/:id", (req, res) => {
   const { id } = req.params;
-
   db.select("*")
     .from("users")
     .where({ id: id })
@@ -73,63 +213,80 @@ app.get("/profile/:id", (req, res) => {
       if (user.length) {
         res.json(user[0]);
       } else {
-        res.status(400).json("unable to register ");
+        res.status(400).json("User not found");
       }
     })
-    .catch((err) => res.status(400).json("unable to find"));
+    .catch((err) => {
+      console.error("Profile fetch error:", err);
+      res.status(400).json("unable to fetch user");
+    });
 });
 
+// SIGNIN endpoint
 app.post("/signin", (req, res) => {
   db.select("email", "hash")
     .from("login")
     .where("email", "=", req.body.email)
     .then((data) => {
-      const isValid = bcrypt.compareSync(req.body.password, data[0].hash);
-      if (isValid) {
-        return db
-          .select("*")
-          .from("users")
-          .where("email", "=", req.body.email)
-          .then((user) => {
-            res.json(user[0]);
-          })
-          .catch((err) => res.status(400).json("unable to get user"));
+      if (data.length) {
+        const isValid = bcrypt.compareSync(req.body.password, data[0].hash);
+        if (isValid) {
+          return db
+            .select("*")
+            .from("users")
+            .where("email", "=", req.body.email)
+            .then((user) => {
+              res.json(user[0]);
+            })
+            .catch((err) => {
+              console.error("Signin user error:", err);
+              res.status(400).json("unable to get user");
+            });
+        } else {
+          res.status(400).json("wrong credentials");
+        }
       } else {
-        res.status(400).json("wrong credentials");
+        res.status(400).json("user not found");
       }
     })
-    .catch((err) => res.status(400).json("unable to get user"));
+    .catch((err) => {
+      console.error("Signin error:", err);
+      res.status(400).json("unable to get user");
+    });
 });
 
+// GENAI endpoint
 app.post("/genai", upload.single("file"), async (req, res) => {
-  // const file = req.file;
+  try {
+    const filePath = req.file.path;
+    const fileData = fs.readFileSync(filePath);
+    const fileBase64 = fileData.toString("base64");
 
-  const filePath = req.file.path;
-  const fileData = fs.readFileSync(filePath);
-  const fileBase64 = fileData.toString("base64");
+    const filePart = {
+      inlineData: {
+        data: fileBase64,
+        mimeType: req.file.mimetype,
+      },
+    };
 
-  const filePart = {
-    inlineData: {
-      data: fileBase64,
-      mimeType: req.file.mimetype,
-    },
-  };
+    const { GoogleGenerativeAI } = require("@google/generative-ai");
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-  const result = await model.generateContent({
-    contents: [
-      { role: "user", parts: [filePart] },
-      { role: "user", parts: [{ text: "summarize this document" }] },
-    ],
-  });
-  res.json({ result: result.response.text() });
+    const result = await model.generateContent({
+      contents: [
+        { role: "user", parts: [filePart] },
+        { role: "user", parts: [{ text: "summarize this document" }] },
+      ],
+    });
+    res.json({ result: result.response.text() });
+  } catch (err) {
+    console.error("GenAI error:", err);
+    res.status(400).json("error processing file");
+  }
 });
 
-app.listen(4000, () => {
-  console.log("im doing it");
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
