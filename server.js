@@ -119,7 +119,7 @@ app.post("/genai", upload.single("file"), async (req, res) => {
       { role: "user", parts: [{ text: "summarize this document" }] },
     ],
   });
-  console.log(result);
+  res.json({ result: result.response.text() });
 });
 
 app.listen(4000, () => {
