@@ -17,9 +17,10 @@ const apiKey = process.env.GEN_AI_KEY;
 // require("dotenv").config();
 // const { Client } = require("pg");
 
-const knex = require("knex")({
+const db = require("knex")({
   client: "pg",
-  connection: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
 });
 
 // client
@@ -41,35 +42,31 @@ app.post("/register", (req, res) => {
   console.log(req.body);
   const hash = bcrypt.hashSync(password);
 
-  knex
-    .transaction((trx) => {
-      trx
-        .insert({
-          hash: hash,
-          email: email,
-        })
-        .into("login")
-        .returning("email")
-        .then(async (loginEmail) => {
-          const user = await trx("users").returning("*").insert({
-            name: name,
-            email: loginEmail[0].email,
-            joined: new Date(),
-          });
-          res.json(user[0]);
-        })
-        .then(trx.commit)
-        .catch(trx.rollback);
-    })
-
-    .catch((err) => res.status(400).json("unable to register "));
+  db.transaction((trx) => {
+    trx
+      .insert({
+        hash: hash,
+        email: email,
+      })
+      .into("login")
+      .returning("email")
+      .then(async (loginEmail) => {
+        const user = await trx("users").returning("*").insert({
+          name: name,
+          email: loginEmail[0].email,
+          joined: new Date(),
+        });
+        res.json(user[0]);
+      })
+      .then(trx.commit)
+      .catch(trx.rollback);
+  }).catch((err) => res.status(400).json("unable to register "));
 });
 
 app.get("/profile/:id", (req, res) => {
   const { id } = req.params;
 
-  knex
-    .select("*")
+  db.select("*")
     .from("users")
     .where({ id: id })
     .then((user) => {
@@ -83,8 +80,7 @@ app.get("/profile/:id", (req, res) => {
 });
 
 app.post("/signin", (req, res) => {
-  knex
-    .select("email", "hash")
+  db.select("email", "hash")
     .from("login")
     .where("email", "=", req.body.email)
     .then((data) => {
